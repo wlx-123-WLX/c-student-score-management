@@ -215,19 +215,19 @@ static void print_float_cell(float number, int width)
 static void print_table_header(void)
 {
     putchar('\n');
-    print_utf8_cell("学号", 8, ALIGN_CENTER);
+    print_utf8_cell("学号", 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("姓名", 10, ALIGN_CENTER);
+    print_utf8_cell("姓名", 10, ALIGN_LEFT);
     putchar(' ');
-    print_utf8_cell(COURSE_NAMES[0], 8, ALIGN_CENTER);
+    print_utf8_cell(COURSE_NAMES[0], 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell(COURSE_NAMES[1], 8, ALIGN_CENTER);
+    print_utf8_cell(COURSE_NAMES[1], 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell(COURSE_NAMES[2], 8, ALIGN_CENTER);
+    print_utf8_cell(COURSE_NAMES[2], 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("总分", 10, ALIGN_CENTER);
+    print_utf8_cell("总分", 10, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("平均分", 10, ALIGN_CENTER);
+    print_utf8_cell("平均分", 10, ALIGN_RIGHT);
     putchar('\n');
 }
 
@@ -274,13 +274,13 @@ void print_student_summaries(STU* head)
     }
 
     putchar('\n');
-    print_utf8_cell("学号", 8, ALIGN_CENTER);
+    print_utf8_cell("学号", 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("姓名", 10, ALIGN_CENTER);
+    print_utf8_cell("姓名", 10, ALIGN_LEFT);
     putchar(' ');
-    print_utf8_cell("总分", 10, ALIGN_CENTER);
+    print_utf8_cell("总分", 10, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("平均分", 10, ALIGN_CENTER);
+    print_utf8_cell("平均分", 10, ALIGN_RIGHT);
     putchar('\n');
     while (head != NULL)
     {
@@ -407,13 +407,13 @@ void print_rank_table(STU* head, int descending)
         descending ? compare_total_descending : compare_total_ascending);
 
     printf("\n%s总分名次表：\n", descending ? "由高到低" : "由低到高");
-    print_utf8_cell("排名", 8, ALIGN_CENTER);
+    print_utf8_cell("排名", 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("学号", 8, ALIGN_CENTER);
+    print_utf8_cell("学号", 8, ALIGN_RIGHT);
     putchar(' ');
-    print_utf8_cell("姓名", 10, ALIGN_CENTER);
+    print_utf8_cell("姓名", 10, ALIGN_LEFT);
     putchar(' ');
-    print_utf8_cell("总分", 10, ALIGN_CENTER);
+    print_utf8_cell("总分", 10, ALIGN_RIGHT);
     putchar('\n');
     for (int i = 0; i < count; i++)
     {
