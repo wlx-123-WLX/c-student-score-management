@@ -1,6 +1,8 @@
 ﻿#include "link.h"
 
 #include "database.h"
+#include <wchar.h>
+#include <windows.h>
 
 // 课程名称
 const char* const COURSE_NAMES[COURSE_COUNT] = {
@@ -127,11 +129,124 @@ int student_rank(STU* head, const STU* target)
     return rank;
 }
 
+enum
+{
+    ALIGN_LEFT,
+    ALIGN_CENTER,
+    ALIGN_RIGHT
+};
+
+static int is_wide_character(wchar_t ch)
+{
+    return
+        (ch >= 0x1100 && ch <= 0x115F) ||
+        (ch >= 0x2E80 && ch <= 0xA4CF) ||
+        (ch >= 0xAC00 && ch <= 0xD7A3) ||
+        (ch >= 0xF900 && ch <= 0xFAFF) ||
+        (ch >= 0xFE10 && ch <= 0xFE19) ||
+        (ch >= 0xFE30 && ch <= 0xFE6F) ||
+        (ch >= 0xFF00 && ch <= 0xFF60) ||
+        (ch >= 0xFFE0 && ch <= 0xFFE6);
+}
+
+static int utf8_display_width(const char* text)
+{
+    int wide_length = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+    if (wide_length <= 0)
+    {
+        return (int)strlen(text);
+    }
+
+    wchar_t* wide_text = (wchar_t*)malloc(sizeof(wchar_t) * wide_length);
+    if (wide_text == NULL)
+    {
+        return (int)strlen(text);
+    }
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, wide_text, wide_length);
+
+    int width = 0;
+    for (int i = 0; i < wide_length && wide_text[i] != L'\0'; i++)
+    {
+        width += is_wide_character(wide_text[i]) ? 2 : 1;
+    }
+    free(wide_text);
+    return width;
+}
+
+static void print_utf8_cell(const char* text, int width, int alignment)
+{
+    int content_width = utf8_display_width(text);
+    int padding = width - content_width;
+    if (padding < 0)
+    {
+        padding = 0;
+    }
+
+    int left_padding = 0;
+    int right_padding = padding;
+    if (alignment == ALIGN_RIGHT)
+    {
+        left_padding = padding;
+        right_padding = 0;
+    }
+    else if (alignment == ALIGN_CENTER)
+    {
+        left_padding = padding / 2;
+        right_padding = padding - left_padding;
+    }
+
+    printf("%*s%s%*s", left_padding, "", text, right_padding, "");
+}
+
+static void print_number_cell(int number, int width)
+{
+    char text[32];
+    snprintf(text, sizeof(text), "%d", number);
+    print_utf8_cell(text, width, ALIGN_RIGHT);
+}
+
+static void print_float_cell(float number, int width)
+{
+    char text[32];
+    snprintf(text, sizeof(text), "%.2f", number);
+    print_utf8_cell(text, width, ALIGN_RIGHT);
+}
+
 static void print_table_header(void)
 {
-    printf("\n%-8s %-12s %-8s %-8s %-8s %-10s %-10s\n",
-        "学号", "姓名", COURSE_NAMES[0], COURSE_NAMES[1],
-        COURSE_NAMES[2], "总分", "平均分");
+    putchar('\n');
+    print_utf8_cell("学号", 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("姓名", 10, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell(COURSE_NAMES[0], 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell(COURSE_NAMES[1], 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell(COURSE_NAMES[2], 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("总分", 10, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("平均分", 10, ALIGN_CENTER);
+    putchar('\n');
+}
+
+static void print_full_student_row(const STU* student)
+{
+    print_number_cell(student->num, 8);
+    putchar(' ');
+    print_utf8_cell(student->name, 10, ALIGN_LEFT);
+    putchar(' ');
+    print_float_cell(student->score[0], 8);
+    putchar(' ');
+    print_float_cell(student->score[1], 8);
+    putchar(' ');
+    print_float_cell(student->score[2], 8);
+    putchar(' ');
+    print_float_cell(student->total, 10);
+    putchar(' ');
+    print_float_cell(student->average, 10);
+    putchar('\n');
 }
 
 void print_student_table(STU* head)
@@ -145,14 +260,7 @@ void print_student_table(STU* head)
     print_table_header();
     while (head != NULL)
     {
-        printf("%-8d %-12s %-8.2f %-8.2f %-8.2f %-10.2f %-10.2f\n",
-            head->num,
-            head->name,
-            head->score[0],
-            head->score[1],
-            head->score[2],
-            head->total,
-            head->average);
+        print_full_student_row(head);
         head = head->next;
     }
 }
@@ -165,11 +273,25 @@ void print_student_summaries(STU* head)
         return;
     }
 
-    printf("\n%-8s %-12s %-10s %-10s\n", "学号", "姓名", "总分", "平均分");
+    putchar('\n');
+    print_utf8_cell("学号", 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("姓名", 10, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("总分", 10, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("平均分", 10, ALIGN_CENTER);
+    putchar('\n');
     while (head != NULL)
     {
-        printf("%-8d %-12s %-10.2f %-10.2f\n",
-            head->num, head->name, head->total, head->average);
+        print_number_cell(head->num, 8);
+        putchar(' ');
+        print_utf8_cell(head->name, 10, ALIGN_LEFT);
+        putchar(' ');
+        print_float_cell(head->total, 10);
+        putchar(' ');
+        print_float_cell(head->average, 10);
+        putchar('\n');
         head = head->next;
     }
 }
@@ -196,8 +318,12 @@ void print_course_summaries(STU* head)
             current = current->next;
         }
 
-        printf("%-8s 总分：%-10.2f 平均分：%-10.2f\n",
-            COURSE_NAMES[course], total, total / count);
+        print_utf8_cell(COURSE_NAMES[course], 8, ALIGN_LEFT);
+        printf(" 总分：");
+        print_float_cell(total, 10);
+        printf(" 平均分：");
+        print_float_cell(total / count, 10);
+        putchar('\n');
     }
 }
 
@@ -281,11 +407,24 @@ void print_rank_table(STU* head, int descending)
         descending ? compare_total_descending : compare_total_ascending);
 
     printf("\n%s总分名次表：\n", descending ? "由高到低" : "由低到高");
-    printf("%-8s %-8s %-12s %-10s\n", "排名", "学号", "姓名", "总分");
+    print_utf8_cell("排名", 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("学号", 8, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("姓名", 10, ALIGN_CENTER);
+    putchar(' ');
+    print_utf8_cell("总分", 10, ALIGN_CENTER);
+    putchar('\n');
     for (int i = 0; i < count; i++)
     {
-        printf("%-8d %-8d %-12s %-10.2f\n",
-            i + 1, students[i]->num, students[i]->name, students[i]->total);
+        print_number_cell(i + 1, 8);
+        putchar(' ');
+        print_number_cell(students[i]->num, 8);
+        putchar(' ');
+        print_utf8_cell(students[i]->name, 10, ALIGN_LEFT);
+        putchar(' ');
+        print_float_cell(students[i]->total, 10);
+        putchar('\n');
     }
 
     free(students);
@@ -306,14 +445,7 @@ void print_sorted_by_id(STU* head)
     print_table_header();
     for (int i = 0; i < count; i++)
     {
-        printf("%-8d %-12s %-8.2f %-8.2f %-8.2f %-10.2f %-10.2f\n",
-            students[i]->num,
-            students[i]->name,
-            students[i]->score[0],
-            students[i]->score[1],
-            students[i]->score[2],
-            students[i]->total,
-            students[i]->average);
+        print_full_student_row(students[i]);
     }
     free(students);
 }
@@ -333,14 +465,7 @@ void print_sorted_by_name(STU* head)
     print_table_header();
     for (int i = 0; i < count; i++)
     {
-        printf("%-8d %-12s %-8.2f %-8.2f %-8.2f %-10.2f %-10.2f\n",
-            students[i]->num,
-            students[i]->name,
-            students[i]->score[0],
-            students[i]->score[1],
-            students[i]->score[2],
-            students[i]->total,
-            students[i]->average);
+        print_full_student_row(students[i]);
     }
     free(students);
 }
@@ -387,10 +512,12 @@ void print_course_grade_statistics(STU* head)
         printf("\n%s等级统计：\n", COURSE_NAMES[course]);
         for (int grade = 0; grade < 5; grade++)
         {
-            printf("%-16s 人数：%-4d 百分比：%.2f%%\n",
-                labels[grade],
-                counts[grade],
-                counts[grade] * 100.0f / count);
+            print_utf8_cell(labels[grade], 20, ALIGN_LEFT);
+            printf(" 人数：");
+            print_number_cell(counts[grade], 4);
+            printf(" 百分比：");
+            print_float_cell(counts[grade] * 100.0f / count, 7);
+            printf("%%\n");
         }
     }
 }

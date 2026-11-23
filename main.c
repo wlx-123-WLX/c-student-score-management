@@ -191,7 +191,7 @@ static STU* input_student(STU* head)
 {
     STU student = { 0 };
     wchar_t line[256];
-    wchar_t wide_name[NAME_LENGTH];
+    wchar_t wide_name[NAME_LENGTH] = { 0 };
 
     system("cls");
     paintWin(5, 1, 90, 22);
@@ -213,17 +213,19 @@ static STU* input_student(STU* head)
         &student.score[0],
         &student.score[1],
         &student.score[2]);
+    int name_length = (int)wcslen(wide_name);
 
     if (matched != 5 ||
         !wide_to_utf8(wide_name, student.name, sizeof(student.name)) ||
-        student.num <= 0 ||
+        student.num < 100 || student.num > 999 ||
+        name_length < 1 || name_length > 3 ||
         student.score[0] < 0 || student.score[0] > 100 ||
         student.score[1] < 0 || student.score[1] > 100 ||
         student.score[2] < 0 || student.score[2] > 100 ||
         strchr(student.name, '|') != NULL)
     {
         gotoxy(8, 14);
-        printf("输入无效。成绩范围为 0-100，姓名中不能包含 |");
+        printf("输入无效：学号必须三位数，姓名最多三个字");
         return head;
     }
 

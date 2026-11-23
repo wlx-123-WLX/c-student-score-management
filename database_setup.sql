@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS students (
     math DECIMAL(5,2) NOT NULL,
     english DECIMAL(5,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_student_no_range CHECK (student_no BETWEEN 100 AND 999),
+    CONSTRAINT chk_name_length CHECK (CHAR_LENGTH(name) BETWEEN 1 AND 3),
     CONSTRAINT chk_chinese CHECK (chinese BETWEEN 0 AND 100),
     CONSTRAINT chk_math CHECK (math BETWEEN 0 AND 100),
     CONSTRAINT chk_english CHECK (english BETWEEN 0 AND 100)
@@ -26,9 +28,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 INSERT INTO students (student_no, name, chinese, math, english)
 VALUES
-    (1001, '张三', 90, 85, 88),
-    (1002, '李四', 78, 92, 80),
-    (1003, '王五', 65, 70, 75)
+    (101, '张三', 90, 85, 88),
+    (102, '李四', 78, 92, 80),
+    (103, '王五', 65, 70, 75)
 ON DUPLICATE KEY UPDATE
     name = VALUES(name),
     chinese = VALUES(chinese),
