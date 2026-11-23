@@ -1,5 +1,7 @@
 ﻿#include "link.h"
 
+#include "database.h"
+
 // 课程名称
 const char* const COURSE_NAMES[COURSE_COUNT] = {
     "语文",
@@ -22,11 +24,6 @@ static void copy_text(char* destination, size_t size, const char* source)
 
     strncpy(destination, source, size - 1);
     destination[size - 1] = '\0';
-}
-
-static int score_in_range(float score)
-{
-    return score >= 0.0f && score <= 100.0f;
 }
 
 // 计算总分和平均分
@@ -404,70 +401,17 @@ void print_all_with_summaries(STU* head)
     print_course_summaries(head);
 }
 
-// 保存到文件
+// 保存到数据库
 int save_students(STU* head)
 {
-    FILE* file = fopen(STUDENT_FILE, "w");
-    if (file == NULL)
-    {
-        printf("无法打开 %s\n", STUDENT_FILE);
-        return 0;
-    }
-
-    // 文件格式：学号|姓名|语文|数学|英语
-    while (head != NULL)
-    {
-        fprintf(file, "%d|%s|%.2f|%.2f|%.2f\n",
-            head->num,
-            head->name,
-            head->score[0],
-            head->score[1],
-            head->score[2]);
-        head = head->next;
-    }
-
-    fclose(file);
-    printf("记录已保存到 %s\n", STUDENT_FILE);
-    return 1;
+    return db_sync_students(head);
 }
 
-// 从文件读取
+// 从数据库读取
 STU* load_students(STU* head)
 {
-    FILE* file = fopen(STUDENT_FILE, "r");
-    if (file == NULL)
-    {
-        printf("未找到 %s，当前没有可读取的记录\n", STUDENT_FILE);
-        return head;
-    }
-
-    char line[256];
-    int loaded = 0;
-    while (fgets(line, sizeof(line), file) != NULL)
-    {
-        STU student = { 0 };
-        int matched = sscanf(line, "%d|%19[^|]|%f|%f|%f",
-            &student.num,
-            student.name,
-            &student.score[0],
-            &student.score[1],
-            &student.score[2]);
-
-        if (matched != 5 || student.num <= 0 ||
-            !score_in_range(student.score[0]) ||
-            !score_in_range(student.score[1]) ||
-            !score_in_range(student.score[2]))
-        {
-            continue;
-        }
-
-        head = add_student(head, student);
-        loaded++;
-    }
-
-    fclose(file);
-    printf("已从 %s 读取 %d 条学生记录\n", STUDENT_FILE, loaded);
-    return head;
+    head = free_students(head);
+    return db_load_students();
 }
 
 // 释放链表

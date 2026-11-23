@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STUDENT_FILE "students.txt"  // 学生记录保存的文件名
 #define COURSE_COUNT 3               // 当前课程数量：语文、数学、英语
 #define NAME_LENGTH 20               // 学生姓名最多保存 19 个字符
 
@@ -50,7 +49,7 @@ void print_sorted_by_name(STU* head);
 void print_course_grade_statistics(STU* head);
 void print_all_with_summaries(STU* head);
 
-// 学生记录的文件保存、读取和释放
+// 学生记录的数据库同步、读取和释放
 int save_students(STU* head);
 STU* load_students(STU* head);
 STU* free_students(STU* head);

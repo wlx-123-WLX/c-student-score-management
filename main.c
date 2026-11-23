@@ -1,14 +1,51 @@
 ﻿#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include <conio.h>
 #include <windows.h>
 #include <locale.h>
 #include "cTool.h"
 #include "link.h"
 #include "test.h"
+#include "database.h"
 
 static char current_user[20] = "";  // 当前登录用户名
+
+static int read_console_line_w(wchar_t* buffer, int capacity)
+{
+    DWORD read = 0;
+    if (!ReadConsoleW(GetStdHandle(STD_INPUT_HANDLE), buffer,
+        (DWORD)capacity - 1, &read, NULL))
+    {
+        return 0;
+    }
+
+    buffer[read] = L'\0';
+    while (read > 0 &&
+        (buffer[read - 1] == L'\r' || buffer[read - 1] == L'\n'))
+    {
+        buffer[--read] = L'\0';
+    }
+    return 1;
+}
+
+static int wide_to_utf8(const wchar_t* source, char* destination, int size)
+{
+    int written = WideCharToMultiByte(CP_UTF8, 0, source, -1,
+        destination, size, NULL, NULL);
+    return written > 0 && written <= size;
+}
+
+static int read_utf8_line(char* destination, int size)
+{
+    wchar_t buffer[256];
+    if (!read_console_line_w(buffer, 256))
+    {
+        return 0;
+    }
+    return wide_to_utf8(buffer, destination, size);
+}
 
 static void clear_input_line(void)
 {
@@ -153,6 +190,8 @@ static void register_screen(void)
 static STU* input_student(STU* head)
 {
     STU student = { 0 };
+    wchar_t line[256];
+    wchar_t wide_name[NAME_LENGTH];
 
     system("cls");
     paintWin(5, 1, 90, 22);
@@ -163,15 +202,21 @@ static STU* input_student(STU* head)
     gotoxy(8, 10);
     printf("> ");
 
-    int matched = scanf("%d %19s %f %f %f",
+    if (!read_console_line_w(line, 256))
+    {
+        return head;
+    }
+
+    int matched = swscanf(line, L"%d %19ls %f %f %f",
         &student.num,
-        student.name,
+        wide_name,
         &student.score[0],
         &student.score[1],
         &student.score[2]);
-    clear_input_line();
 
-    if (matched != 5 || student.num <= 0 ||
+    if (matched != 5 ||
+        !wide_to_utf8(wide_name, student.name, sizeof(student.name)) ||
+        student.num <= 0 ||
         student.score[0] < 0 || student.score[0] > 100 ||
         student.score[1] < 0 || student.score[1] > 100 ||
         student.score[2] < 0 || student.score[2] > 100 ||
@@ -191,9 +236,18 @@ static STU* input_student(STU* head)
 
     calculate_student_summary(&student);
     head = add_student(head, student);
-    gotoxy(8, 14);
+    if (!save_students(head))
+    {
+        head = load_students(head);
+        gotoxy(8, 15);
+        printf("录入失败：数据库保存失败");
+        return head;
+    }
+
+    gotoxy(8, 15);
+    printf("学生记录已同步到MySQL");
+    gotoxy(8, 17);
     printf("录入成功，总分 %.2f，平均分 %.2f", student.total, student.average);
-    save_students(head);
     return head;
 }
 
@@ -234,8 +288,11 @@ static void query_by_name(STU* head)
     char name[NAME_LENGTH] = "";
     gotoxy(4, 4);
     printf("请输入要查询的姓名：");
-    scanf("%19s", name);
-    clear_input_line();
+    if (!read_utf8_line(name, sizeof(name)))
+    {
+        printf("\n姓名读取失败\n");
+        return;
+    }
 
     int found = 0;
     while (head != NULL)
@@ -283,8 +340,8 @@ static void print_student_menu(STU* head)
     gotoxy(52, 6);  printf("9. 按姓名查询排名和成绩");
     gotoxy(52, 8);  printf("10. 课程等级人数和百分比");
     gotoxy(52, 10); printf("11. 输出全部成绩和课程汇总");
-    gotoxy(52, 12); printf("12. 保存记录到文件");
-    gotoxy(52, 14); printf("13. 从文件读取并显示");
+    gotoxy(52, 12); printf("12. 同步记录到数据库");
+    gotoxy(52, 14); printf("13. 从数据库读取并显示");
     gotoxy(52, 16); printf("0. 退出登录");
 
     gotoxy(5, 19);
@@ -350,10 +407,12 @@ static STU* student_menu(STU* head)
             print_all_with_summaries(head);
             break;
         case 12:
-            save_students(head);
+            if (save_students(head))
+            {
+                printf("学生记录已同步到MySQL\n");
+            }
             break;
         case 13:
-            head = free_students(head);
             head = load_students(head);
             print_student_table(head);
             break;
@@ -371,10 +430,17 @@ static STU* student_menu(STU* head)
 int main(void)
 {
     SetConsoleOutputCP(65001);
-    setlocale(LC_ALL, "zh-CN");
+    SetConsoleCP(65001);
+    setlocale(LC_ALL, ".UTF-8");
 
     STU* head = NULL;
     system("cls");
+    if (!db_connect())
+    {
+        printf("\n按任意键退出...");
+        _getch();
+        return 1;
+    }
     head = load_students(head);
     Sleep(700);
 
@@ -419,5 +485,6 @@ int main(void)
     }
 
     head = free_students(head);
+    db_close();
     return 0;
 }
